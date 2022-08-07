@@ -1,0 +1,54 @@
+
+attach(mortal_covid)
+y=Death
+
+x1=PVD
+x2=MAP<70
+x3=Glucose_range
+x4=Ferritin_range
+x5=IL6>150
+x6=Procalcitonin >0.1
+x7=severidad_grupos
+x8=`Lymphocytes < 1`
+x9=`WBC <1.8 or > 4.8`
+X = model.matrix(~ x1+x2+x3+x4+x5+x6+x7+x8+x9)
+
+head(X)
+dim(X)
+
+modelo_mariana <- function(){
+  for (i in 1:N) {
+    y[i] ~ dbern(p[i])   #variable respuesta
+    
+    logit(p[i]) <- inprod(b[], x[i,])  #predictor lineal
+  }
+  for (j in 1:K) {
+    b[j] ~ dnorm(0,1.0E-12)  #apriori
+  }
+}
+
+
+
+#Tamano de la muestra
+N = dim(mortal_covid)[1]
+
+# Input o informacion de entrada
+data.input.jags <- list(y=y, x = X, N = N, K = ncol(X))
+
+
+#Parametros a monitorear
+bayes.mod.params <- c("b")
+
+
+#Puntos iniciales de la cadena MCMC
+bayes.mod.inits <- function(){
+  list("b" = rnorm(11))  #cantidad de variables 
+}
+
+
+set.seed(123)
+bayes.mod.fit <- jags(data = data.input.jags, inits = bayes.mod.inits,
+                      parameters.to.save = bayes.mod.params, n.chains = 3, n.iter = 10000,
+                      n.burnin = 1000, model.file = modelo_mariana)
+
+print(bayes.mod.fit)
